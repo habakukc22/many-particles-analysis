@@ -74,17 +74,15 @@ def get_fft(time, curve):
   xf = fftfreq(N, sample_interval)
   return xf, yf
 
-def get_xf_yf_fund(time, curve):
+def get_xf_yf_fund(time, curve, fund_freq):
   """Return the frequency and complex amplitude for the point of the FFT with largest modulus. \n
   (time, curve) -> (xf_fund, yf_fund)"""
   xf, yf = get_fft(time, curve)
   mask = xf > 0
   xf = xf[mask]
   yf = yf[mask]
-
-  abs_yf_list = np.abs(yf)
-  largest_amp_list = np.where(abs_yf_list == abs_yf_list.max())[0]
-  idx_freq = largest_amp_list[0] if len(largest_amp_list) == 1 else None
+  
+  idx_freq = np.argmin(np.abs(xf - fund_freq))
 
   xf_fund, yf_fund = xf[idx_freq], yf[idx_freq]
 
@@ -157,7 +155,7 @@ def plot_time_and_freq_domain(time, lum_curve, laser_curve):
     axs[1].set_title("Frequency Domain")
     plt.show()
 
-def time_domain_visual_verification(particles: list, rows, cols, particles_off = []):
+def time_domain_visual_verification(particles: list, particles_off = []):
 
     for p_idx, p_dic in enumerate(particles):
         if p_idx in particles_off: continue
@@ -166,21 +164,19 @@ def time_domain_visual_verification(particles: list, rows, cols, particles_off =
         print(f"  Processing particle {p_dic['p_label']}  ")
         print(f"{'='*50}")
 
-        omegas      = []
-        phase_diffs = []
-
+        # Find the number of frequencies measured for each particle 
+        freq_list = sorted(set([dic["freq"] for dic in p_dic["p_data"]]))
+        cols = 4
+        rows = int(np.ceil(len(freq_list) / cols))
+        
         # ---- Subplots de verificação visual ----
         fig, axs = plt.subplots(rows, cols, figsize=(12, 12), constrained_layout=True)
         fig.suptitle(f"Particle {p_dic["p_label"]}", fontsize=14)
 
-        # data = p_dic["p_data"]
-
         for index, step_data in enumerate(p_dic["p_data"]):
             freq = step_data["freq"]
             i, j = divmod(index, cols)
-            omega = 2 * np.pi * float(freq) * 1e-6
-            omegas.append(omega)
-
+            
             cmap = plt.get_cmap("coolwarm")
             norm = mcolors.Normalize(vmin=0, vmax = (len(step_data["data"])))
 
@@ -190,6 +186,5 @@ def time_domain_visual_verification(particles: list, rows, cols, particles_off =
                 ax.plot(rep[:,0], rep[:,1], color=c_grad)
 
             ax.set_title(f"{freq} Hz")
-
 
         plt.show()
